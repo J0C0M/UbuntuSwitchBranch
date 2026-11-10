@@ -14,6 +14,9 @@ __gsw_branches() {
     '
 }
 
+# Both pickers run with --no-mouse: fzf would otherwise capture the mouse and
+# the terminal could not select/copy text (hashes, commit messages).
+
 # Pick a commit on <ref> with fzf. Prints the key that ended the picker (empty
 # for Enter, "ctrl-o" for back) and then the abbreviated hash. Esc prints
 # nothing.
@@ -21,7 +24,7 @@ __gsw_pick_commit() {
   git log --color=always -n 500 \
     --format='%C(auto)%h%d%C(reset) %s %C(dim)(%cr)%C(reset)' "$1" -- |
     fzf \
-      --height=70% --reverse --ansi --no-sort \
+      --height=70% --reverse --ansi --no-sort --no-mouse \
       --prompt='commit> ' \
       --header="commits on $2   ctrl-o: back to branches" \
       --expect=ctrl-o \
@@ -52,7 +55,7 @@ gsw() {
     # selected line.
     out=$(
       __gsw_branches | fzf \
-        --height=70% --reverse --ansi \
+        --height=70% --reverse --ansi --no-mouse \
         --delimiter=$'\t' --with-nth=1 \
         --prompt='branch> ' \
         --header="current: ${current:-detached HEAD}   ctrl-o: pick a commit" \
