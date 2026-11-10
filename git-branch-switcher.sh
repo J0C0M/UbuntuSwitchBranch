@@ -68,3 +68,37 @@ if [ -n "$ZSH_VERSION" ]; then
 elif [ -n "$BASH_VERSION" ]; then
   bind -x '"\C-g": gsw'
 fi
+
+# Show the current branch in the prompt with git's own __git_ps1. Starship
+# does this itself, so leave the prompt alone when it is installed.
+if ! command -v starship >/dev/null 2>&1; then
+  for __gsw_f in \
+    /usr/lib/git-core/git-sh-prompt \
+    /usr/share/git/completion/git-prompt.sh \
+    /usr/share/git-core/contrib/completion/git-prompt.sh; do
+    if [ -r "$__gsw_f" ]; then
+      . "$__gsw_f"
+      break
+    fi
+  done
+  unset __gsw_f
+
+  # Insert the branch before the final prompt character; the *__git_ps1*
+  # cases make re-sourcing this file a no-op.
+  if command -v __git_ps1 >/dev/null 2>&1; then
+    if [ -n "$ZSH_VERSION" ]; then
+      setopt PROMPT_SUBST
+      case $PROMPT in
+        *__git_ps1*) ;;
+        *'%# ') PROMPT=${PROMPT%'%# '}'%F{yellow}$(__git_ps1 " (%s)")%f%# ' ;;
+        *) PROMPT=$PROMPT'%F{yellow}$(__git_ps1 " (%s)")%f' ;;
+      esac
+    else
+      case $PS1 in
+        *__git_ps1*) ;;
+        *'\$ ') PS1=${PS1%'\$ '}'\[\e[33m\]$(__git_ps1 " (%s)")\[\e[0m\]\$ ' ;;
+        *) PS1=$PS1'\[\e[33m\]$(__git_ps1 " (%s)")\[\e[0m\]' ;;
+      esac
+    fi
+  fi
+fi
