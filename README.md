@@ -19,22 +19,32 @@ sudo dnf install fzf      # Fedora
 sudo pacman -S fzf        # Arch
 ```
 
-## Install on another machine
+## Install on another Ubuntu machine
 
-1. Install `git` and `fzf` (see above).
-2. Clone this repo anywhere, for example:
+Developed and tested on Ubuntu 26.04 (bash 5.3, git 2.53, fzf 0.67). `gsw` uses `git switch`, which needs git 2.23 or newer (Ubuntu 20.04 and later ship that). The repo is public, so you do not need a GitHub account or SSH key to download it.
 
-   ```bash
-   git clone git@github.com:J0C0M/UbuntuSwitchBranch.git ~/dotfiles/UbuntuSwitchBranch
-   ```
-
-3. Add one line to `~/.bashrc` (or `~/.zshrc` for zsh), pointing at where you cloned it:
+1. Open a terminal and run these commands. They install `git` and `fzf`, download the repo to `~/UbuntuSwitchBranch`, save a backup of your `~/.bashrc` as `~/.bashrc.bak` (only if that backup does not exist yet) and add one line to `~/.bashrc`:
 
    ```bash
-   [ -f "$HOME/dotfiles/UbuntuSwitchBranch/git-branch-switcher.sh" ] && . "$HOME/dotfiles/UbuntuSwitchBranch/git-branch-switcher.sh"
+   sudo apt update && sudo apt install -y git fzf
+   git clone https://github.com/J0C0M/UbuntuSwitchBranch.git ~/UbuntuSwitchBranch
+   [ -e ~/.bashrc.bak ] || cp ~/.bashrc ~/.bashrc.bak
+   echo '[ -f "$HOME/UbuntuSwitchBranch/git-branch-switcher.sh" ] && . "$HOME/UbuntuSwitchBranch/git-branch-switcher.sh"' >> ~/.bashrc
    ```
 
-4. Reload your shell with `source ~/.bashrc` (or `source ~/.zshrc`), or open a new terminal.
+2. Load it in the terminal you are in (new terminals pick it up by themselves):
+
+   ```bash
+   source ~/.bashrc
+   ```
+
+3. Go into any git repository and run `gsw`, or press Ctrl+G.
+
+Update later with `git -C ~/UbuntuSwitchBranch pull`. To remove it, delete the added line from `~/.bashrc` (or restore `~/.bashrc.bak`) and delete `~/UbuntuSwitchBranch`.
+
+### Other distributions or zsh
+
+Install `git` and `fzf` with your package manager (see Requirements above), clone the repo the same way, and add the same line to `~/.zshrc` instead of `~/.bashrc` if you use zsh. The zsh support has not been tested yet.
 
 ## Usage
 
