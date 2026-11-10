@@ -66,7 +66,8 @@ gsw() {
     hash=$(__gsw_pick_commit "$ref" "$name")
     [ -n "$hash" ] || return 0
     GSW_COMMIT=$hash
-    printf '%s\n' "$hash"
+    # from Ctrl+G the widget inserts it at the cursor instead
+    [ -n "$__GSW_IN_WIDGET" ] || printf '%s\n' "$hash"
     return 0
   fi
 
@@ -84,17 +85,26 @@ case $- in
   *) return 0 ;;
 esac
 
-# Ctrl+G opens gsw.
+# Ctrl+G opens gsw. A commit picked with Ctrl+O is inserted at the cursor, so
+# "git reset --soft " + Ctrl+G + Ctrl+O gives "git reset --soft <hash>".
 if [ -n "$ZSH_VERSION" ]; then
   __gsw_widget() {
+    local __GSW_IN_WIDGET=1 GSW_COMMIT=
     zle -I
     gsw
+    LBUFFER+=$GSW_COMMIT
     zle reset-prompt
   }
   zle -N __gsw_widget
   bindkey '^G' __gsw_widget
 elif [ -n "$BASH_VERSION" ]; then
-  bind -x '"\C-g": gsw'
+  __gsw_widget() {
+    local __GSW_IN_WIDGET=1 GSW_COMMIT=
+    gsw
+    READLINE_LINE="${READLINE_LINE:0:READLINE_POINT}${GSW_COMMIT}${READLINE_LINE:READLINE_POINT}"
+    READLINE_POINT=$((READLINE_POINT + ${#GSW_COMMIT}))
+  }
+  bind -x '"\C-g": __gsw_widget'
 fi
 
 # Show the current branch in the prompt with git's own __git_ps1. Starship
