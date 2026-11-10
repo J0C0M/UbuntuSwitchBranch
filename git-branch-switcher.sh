@@ -14,7 +14,22 @@ __gsw_branches() {
     '
 }
 
-# Pick a branch with fzf and switch to it.
+# Pick a commit on <ref> with fzf and print its abbreviated hash.
+__gsw_pick_commit() {
+  git log --color=always -n 500 \
+    --format='%C(auto)%h%d%C(reset) %s %C(dim)(%cr)%C(reset)' "$1" -- |
+    fzf \
+      --height=70% --reverse --ansi --no-sort \
+      --prompt='commit> ' \
+      --header="commits on $2" \
+      --preview='git show --stat --color=always {1} --' \
+      --preview-window='right:55%' |
+    awk '{ print $1; exit }'
+}
+
+# Pick a branch with fzf and switch to it. Ctrl+O instead of Enter picks a
+# commit on that branch: the hash is printed (or, via Ctrl+G, put on the
+# command line) so it can be used in e.g. git reset --soft.
 gsw() {
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "gsw: not inside a git repository." >&2
@@ -25,22 +40,35 @@ gsw() {
     return 1
   fi
 
-  local current selection name ref
+  local current out key selection name ref hash
   current=$(git branch --show-current)
 
-  selection=$(
+  # --expect makes fzf print the pressed key (empty for Enter) before the
+  # selected line.
+  out=$(
     __gsw_branches | fzf \
       --height=70% --reverse --ansi \
       --delimiter=$'\t' --with-nth=1 \
       --prompt='branch> ' \
-      --header="current: ${current:-detached HEAD}" \
+      --header="current: ${current:-detached HEAD}   ctrl-o: pick a commit" \
+      --expect=ctrl-o \
       --preview='git log --oneline --graph --color=always -n 40 {2} --' \
       --preview-window='right:55%'
   ) || return 0
+  key=${out%%$'\n'*}
+  selection=${out#*$'\n'}
   [ -n "$selection" ] || return 0
 
   name=${selection%%$'\t'*}
   ref=${selection#*$'\t'}
+
+  if [ "$key" = ctrl-o ]; then
+    hash=$(__gsw_pick_commit "$ref" "$name")
+    [ -n "$hash" ] || return 0
+    GSW_COMMIT=$hash
+    printf '%s\n' "$hash"
+    return 0
+  fi
 
   if git show-ref --verify --quiet "refs/heads/$name"; then
     git switch "$name"
