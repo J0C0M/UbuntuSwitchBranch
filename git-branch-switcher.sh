@@ -49,3 +49,22 @@ gsw() {
     git switch --track "${ref#refs/remotes/}"
   fi
 }
+
+# Everything below only makes sense in an interactive shell.
+case $- in
+  *i*) ;;
+  *) return 0 ;;
+esac
+
+# Ctrl+G opens gsw.
+if [ -n "$ZSH_VERSION" ]; then
+  __gsw_widget() {
+    zle -I
+    gsw
+    zle reset-prompt
+  }
+  zle -N __gsw_widget
+  bindkey '^G' __gsw_widget
+elif [ -n "$BASH_VERSION" ]; then
+  bind -x '"\C-g": gsw'
+fi
