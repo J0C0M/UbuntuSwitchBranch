@@ -14,17 +14,20 @@ __gsw_branches() {
     '
 }
 
-# Pick a commit on <ref> with fzf and print its abbreviated hash.
+# Pick a commit on <ref> with fzf. Prints the key that ended the picker (empty
+# for Enter, "ctrl-o" for back) and then the abbreviated hash. Esc prints
+# nothing.
 __gsw_pick_commit() {
   git log --color=always -n 500 \
     --format='%C(auto)%h%d%C(reset) %s %C(dim)(%cr)%C(reset)' "$1" -- |
     fzf \
       --height=70% --reverse --ansi --no-sort \
       --prompt='commit> ' \
-      --header="commits on $2" \
+      --header="commits on $2   ctrl-o: back to branches" \
+      --expect=ctrl-o \
       --preview='git show --stat --color=always {1} --' \
       --preview-window='right:55%' |
-    awk '{ print $1; exit }'
+    awk 'NR == 1 { print; next } { print $1; exit }'
 }
 
 # Pick a branch with fzf and switch to it. Ctrl+O instead of Enter picks a
@@ -40,43 +43,53 @@ gsw() {
     return 1
   fi
 
-  local current out key selection name ref hash
+  local current out key selection name ref pick hash
   current=$(git branch --show-current)
 
-  # --expect makes fzf print the pressed key (empty for Enter) before the
-  # selected line.
-  out=$(
-    __gsw_branches | fzf \
-      --height=70% --reverse --ansi \
-      --delimiter=$'\t' --with-nth=1 \
-      --prompt='branch> ' \
-      --header="current: ${current:-detached HEAD}   ctrl-o: pick a commit" \
-      --expect=ctrl-o \
-      --preview='git log --oneline --graph --color=always -n 40 {2} --' \
-      --preview-window='right:55%'
-  ) || return 0
-  key=${out%%$'\n'*}
-  selection=${out#*$'\n'}
-  [ -n "$selection" ] || return 0
+  # Ctrl+O in the commit list comes back here, hence the loop.
+  while :; do
+    # --expect makes fzf print the pressed key (empty for Enter) before the
+    # selected line.
+    out=$(
+      __gsw_branches | fzf \
+        --height=70% --reverse --ansi \
+        --delimiter=$'\t' --with-nth=1 \
+        --prompt='branch> ' \
+        --header="current: ${current:-detached HEAD}   ctrl-o: pick a commit" \
+        --expect=ctrl-o \
+        --preview='git log --oneline --graph --color=always -n 40 {2} --' \
+        --preview-window='right:55%'
+    ) || return 0
+    key=${out%%$'\n'*}
+    selection=${out#*$'\n'}
+    [ -n "$selection" ] || return 0
 
-  name=${selection%%$'\t'*}
-  ref=${selection#*$'\t'}
+    name=${selection%%$'\t'*}
+    ref=${selection#*$'\t'}
 
-  if [ "$key" = ctrl-o ]; then
-    hash=$(__gsw_pick_commit "$ref" "$name")
+    if [ "$key" != ctrl-o ]; then
+      if git show-ref --verify --quiet "refs/heads/$name"; then
+        git switch "$name"
+      else
+        # remote-only branch: create a local branch that tracks it
+        git switch --track "${ref#refs/remotes/}"
+      fi
+      return
+    fi
+
+    pick=$(__gsw_pick_commit "$ref" "$name")
+    [ -n "$pick" ] || return 0              # Esc
+    key=${pick%%$'\n'*}
+    if [ "$key" = ctrl-o ]; then
+      continue                              # back to the branch list
+    fi
+    hash=${pick#*$'\n'}
     [ -n "$hash" ] || return 0
     GSW_COMMIT=$hash
     # from Ctrl+G the widget inserts it at the cursor instead
     [ -n "$__GSW_IN_WIDGET" ] || printf '%s\n' "$hash"
     return 0
-  fi
-
-  if git show-ref --verify --quiet "refs/heads/$name"; then
-    git switch "$name"
-  else
-    # remote-only branch: create a local branch that tracks it
-    git switch --track "${ref#refs/remotes/}"
-  fi
+  done
 }
 
 # Everything below only makes sense in an interactive shell.
