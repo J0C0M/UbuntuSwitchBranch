@@ -47,12 +47,14 @@ Type to filter, arrow keys to move, Enter to switch, Esc to cancel.
 
 ### Picking a commit (e.g. for `git reset --soft`)
 
-Press **Ctrl+O** instead of Enter on a branch to list that branch's commits (with a `git show --stat` preview). Enter on a commit does not switch anything:
+Press **Ctrl+O** instead of Enter on a branch to list that branch's commits (with a `git show --stat` preview). Press **Ctrl+O** again in the commit list to go back to the branches; Esc quits. Enter on a commit does not switch anything:
 
 - Started with **Ctrl+G**, the short hash is inserted on your command line at the cursor. Type `git reset --soft `, press Ctrl+G, pick a branch, press Ctrl+O, pick a commit, and the line reads `git reset --soft <hash>`.
 - Started with plain **`gsw`**, the hash is printed.
 
-To copy text off the screen with the mouse while fzf is open, hold **Shift** while dragging in most terminals (fzf otherwise captures the mouse), then copy with Ctrl+Shift+C.
+### Copying text with the mouse
+
+The pickers run with `--no-mouse`, so fzf does not capture the mouse and your terminal can select text itself: double-click a hash (or drag over a commit message) while the list is open, then copy with Ctrl+Shift+C. The trade-off is that clicking an entry and scrolling the list with the mouse wheel no longer work; use the keyboard. To get those back, remove `--no-mouse` from the two `fzf` calls in `git-branch-switcher.sh`.
 
 ## Notes
 
